@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>core0 — Autonomous Cyber Defense</title>
+<meta name="description" content="core0 is an AI-native security platform: threat detection, an autonomous SOC copilot, code auditing and zero trust infrastructure in one core.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #04060a;
+    --ink: #eef4f8;
+    --mute: #8a97a6;
+    --dim: #4a5562;
+    --ice: #9fe7ff;
+    --signal: #c8ff4d;
+    --threat: #ff9f43;
+    --glass: rgba(14, 20, 28, .55);
+    --line: rgba(159, 231, 255, .14);
+    --mono: "Geist Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--ink); font-family: "Geist", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--ice); color: var(--bg); }
+  .sr { position: absolute; left: -9999px; }
+
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+  .vignette { position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(4,6,10,.85) 100%),
+                linear-gradient(to bottom, rgba(4,6,10,.55), transparent 22%, transparent 75%, rgba(4,6,10,.6)); }
+  main, footer { position: relative; z-index: 2; }
+
+  /* nav */
+  .nav { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10;
+    width: min(1180px, calc(100% - 32px)); display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 10px 10px 22px; border-radius: 14px; background: rgba(10, 15, 22, .42);
+    border: 1px solid rgba(255,255,255,.07); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); }
+  .logo { font-weight: 600; font-size: 19px; letter-spacing: -.02em; display: flex; align-items: center; gap: 9px; }
+  .logo i { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--ice); position: relative; }
+  .logo i::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--ice); box-shadow: 0 0 12px var(--ice); }
+  .links { display: flex; gap: 30px; font-size: 13.5px; color: var(--mute); }
+  .links a { transition: color .2s; }
+  .links a:hover { color: var(--ink); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; padding: 10px 18px; white-space: nowrap;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); transition: background .2s, transform .2s; cursor: pointer; color: var(--ink); font-family: inherit; }
+  .btn:hover { background: rgba(255,255,255,.12); }
+  .btn.solid { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn.solid:hover { background: #fff; transform: translateY(-1px); }
+  .btn:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+
+  .wrap { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ice); display: inline-flex; align-items: center; gap: 10px; }
+  .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 10px var(--signal); animation: blink 2.4s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  /* hero */
+  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: flex-end; padding: 120px 0 8vh; }
+  .hero h1 { font-size: clamp(44px, 8.4vw, 124px); line-height: .94; letter-spacing: -.045em; font-weight: 500; margin: 22px 0 26px; max-width: 12ch; }
+  .hero h1 em { font-style: normal; color: transparent; -webkit-text-stroke: 1px rgba(238,244,248,.7); }
+  .hero-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; flex-wrap: wrap; }
+  .hero p { max-width: 460px; color: #b9c4cf; font-size: 17px; line-height: 1.55; }
+  .ctas { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+  .live { font-family: var(--mono); font-size: 12px; color: var(--mute); text-align: right; line-height: 1.9; }
+  .live b { display: block; font-family: "Geist"; font-weight: 400; font-size: clamp(30px, 3.6vw, 46px); color: var(--ink); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .scroll-cue { margin-top: 7vh; display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: .14em; text-transform: uppercase; }
+  .scroll-cue span { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+
+  /* flight interlude */
+  .flight { height: 170vh; }
+  .flight .wrap { height: 100%; }
+  .flight h2 { position: sticky; top: 40vh; font-size: clamp(30px, 4.6vw, 64px); font-weight: 400; letter-spacing: -.035em; line-height: 1.05; max-width: 15ch; }
+  .flight h2 span { color: var(--mute); }
+
+  /* capabilities */
+  .cap { min-height: 120vh; display: flex; align-items: center; padding: 12vh 0; }
+  .cap .wrap { display: grid; grid-template-columns: 1fr 1.05fr; gap: 64px; align-items: center; }
+  .cap.flip .copy { order: 2; }
+  .num { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: .1em; }
+  .num b { color: var(--ice); font-weight: 500; }
+  .cap h3 { font-size: clamp(34px, 4.2vw, 58px); font-weight: 500; letter-spacing: -.04em; line-height: 1; margin: 18px 0 20px; }
+  .cap p { color: #b0bcc8; font-size: 16.5px; line-height: 1.6; max-width: 470px; }
+  .cap ul { list-style: none; margin-top: 28px; border-top: 1px solid var(--line); max-width: 470px; }
+  .cap li { padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; display: flex; justify-content: space-between; gap: 16px; color: #d6dee6; }
+  .cap li span { font-family: var(--mono); font-size: 12px; color: var(--mute); white-space: nowrap; }
+
+  .panel { background: var(--glass); border: 1px solid rgba(255,255,255,.08); border-radius: 18px; padding: 22px; min-width: 0;
+    backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06); font-size: 13px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--mute); margin-bottom: 18px; }
+  .pill { font-family: var(--mono); font-size: 11px; padding: 4px 9px; border-radius: 99px; border: 1px solid; white-space: nowrap; }
+  .pill.ok { color: var(--signal); border-color: rgba(200,255,77,.3); background: rgba(200,255,77,.06); }
+  .pill.warn { color: var(--threat); border-color: rgba(255,159,67,.35); background: rgba(255,159,67,.07); }
+  .pill.ice { color: var(--ice); border-color: rgba(159,231,255,.3); background: rgba(159,231,255,.06); }
+  code { font-family: var(--mono); font-size: .92em; color: var(--ice); }
+
+  .chart { width: 100%; height: 190px; display: block; }
+  .chart-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-radius: 10px; overflow: hidden; margin-top: 16px; }
+  .chart-meta div { background: rgba(8,12,18,.8); padding: 12px 14px; }
+  .chart-meta small { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--mute); margin-bottom: 4px; }
+  .chart-meta b { font-weight: 500; font-size: 15px; }
+
+  .msg { padding: 12px 14px; border-radius: 12px; line-height: 1.55; margin-bottom: 10px; color: #d6dee6; }
+  .msg.q { background: rgba(255,255,255,.05); margin-left: 18%; }
+  .msg.a { border: 1px solid var(--line); background: rgba(159,231,255,.03); }
+  .msg.a ol { margin: 8px 0 0 18px; color: #b0bcc8; }
+  .msg.a li { margin: 3px 0; }
+  .who { font-family: var(--mono); font-size: 10.5px; color: var(--mute); margin-bottom: 6px; display: block; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  pre.diff { font-family: var(--mono); font-size: 12.5px; line-height: 1.75; overflow-x: auto; background: rgba(4,6,10,.6); border-radius: 10px; padding: 14px 0; }
+  pre.diff span { display: block; padding: 0 16px; white-space: pre; }
+  .del { background: rgba(255,159,67,.09); color: #ffc58f; }
+  .add { background: rgba(200,255,77,.07); color: #ddff9c; }
+  .cm { color: var(--dim); }
+  .finding { display: flex; gap: 12px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,159,67,.22); color: #d6dee6; line-height: 1.5; }
+
+  .policy { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .policy td { padding: 12px 6px; border-bottom: 1px solid var(--line); }
+  .policy td:first-child { padding-left: 0; }
+  .policy td:last-child { text-align: right; padding-right: 0; }
+  .policy small { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--mute); margin-top: 3px; }
+  .checks { display: flex; gap: 4px; }
+  .checks i { width: 8px; height: 8px; border-radius: 2px; background: var(--signal); opacity: .85; }
+  .checks i.x { background: var(--threat); }
+
+  /* metrics */
+  .metrics { padding: 22vh 0 14vh; }
+  .metrics h2, .console h2 { font-size: clamp(32px, 4.4vw, 60px); font-weight: 500; letter-spacing: -.04em; line-height: 1.02; max-width: 17ch; margin-top: 18px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 60px; border-top: 1px solid var(--line); }
+  .grid4 div { padding: 28px 24px 0 0; }
+  .grid4 b { display: block; font-size: clamp(40px, 4.8vw, 68px); font-weight: 400; letter-spacing: -.05em; line-height: 1; }
+  .grid4 b sup { font-size: .4em; color: var(--ice); vertical-align: top; margin-left: 4px; }
+  .grid4 p { color: var(--mute); font-size: 14px; margin-top: 12px; line-height: 1.5; max-width: 220px; }
+
+  /* console */
+  .console { padding: 10vh 0 20vh; }
+  .term { margin-top: 44px; padding: 0; overflow: hidden; }
+  .term .panel-head { padding: 14px 18px; margin: 0; border-bottom: 1px solid var(--line); }
+  .dots { display: flex; gap: 6px; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.12); }
+  #feed { font-family: var(--mono); font-size: 12.5px; line-height: 2; padding: 14px 18px; height: 360px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+  #feed div { display: grid; grid-template-columns: 76px 64px minmax(0, 1fr) auto; gap: 14px; white-space: nowrap; animation: rise .5s ease-out; }
+  #feed div > span:nth-child(3) { overflow: hidden; text-overflow: ellipsis; color: #c4ced8; }
+  #feed .t { color: var(--dim); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+  /* cta */
+  .cta { min-height: 100svh; display: flex; align-items: center; text-align: center; }
+  .cta h2 { font-size: clamp(46px, 8vw, 118px); font-weight: 500; letter-spacing: -.05em; line-height: .95; margin: 22px auto 34px; max-width: 13ch; }
+  .cta form { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; padding: 6px; border-radius: 14px; background: rgba(10,15,22,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .cta input { flex: 1; min-width: 0; background: none; border: 0; color: var(--ink); font: inherit; font-size: 15px; padding: 0 12px; }
+  .cta input::placeholder { color: var(--dim); }
+  #formNote { font-family: var(--mono); font-size: 12px; color: var(--signal); margin-top: 16px; min-height: 18px; }
+
+  footer { border-top: 1px solid var(--line); background: rgba(4,6,10,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 28px 0; font-size: 13px; color: var(--mute); flex-wrap: wrap; }
+  .foot-links { display: flex; gap: 24px; flex-wrap: wrap; }
+
+  /* reveal */
+  .rv { opacity: 0; transform: translateY(28px); transition: opacity 1s cubic-bezier(.2,.7,.2,1), transform 1s cubic-bezier(.2,.7,.2,1); }
+  .rv.in { opacity: 1; transform: none; }
+  .rv.d1 { transition-delay: .12s; } .rv.d2 { transition-delay: .24s; }
+
+  @media (max-width: 900px) {
+    .links { display: none; }
+    .cap .wrap { grid-template-columns: 1fr; gap: 36px; }
+    .cap.flip .copy { order: 0; }
+    .grid4 { grid-template-columns: 1fr 1fr; row-gap: 36px; }
+    .live { text-align: left; }
+    #feed div { grid-template-columns: 58px minmax(0, 1fr) auto; }
+    #feed div > span:first-child { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .rv { opacity: 1; transform: none; transition: none; }
+    .eyebrow::before, #feed div { animation: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+
+<nav class="nav" aria-label="Primary">
+  <a class="logo" href="#top"><i></i>core0</a>
+  <div class="links">
+    <a href="#detection">Detection</a>
+    <a href="#copilot">SOC Copilot</a>
+    <a href="#code">Code Audit</a>
+    <a href="#zerotrust">Zero Trust</a>
+    <a href="#platform">Platform</a>
+  </div>
+  <a class="btn solid" href="#contact">Request access</a>
+</nav>
+
+<main id="top">
+  <section class="hero" data-cam>
+    <div class="wrap">
+      <span class="eyebrow rv">Autonomous cyber defense</span>
+      <h1 class="rv d1">The calm at the <em>center</em> of every attack.</h1>
+      <div class="hero-row">
+        <div class="rv d2">
+          <p>core0 watches every packet, process and pull request across your estate, then reasons, decides and contains at machine speed while your team stays in command.</p>
+          <div class="ctas">
+            <a class="btn solid" href="#contact">Request access</a>
+            <a class="btn" href="#detection">Fly into the core ↓</a>
+          </div>
+        </div>
+        <div class="live rv d2">
+          Threats neutralized · last 24h
+          <b id="counter">1,284,903</b>
+          median time-to-contain 38s
+        </div>
+      </div>
+      <div class="scroll-cue rv d2">Scroll to descend <span></span> 40,000 ft → 1 packet</div>
+    </div>
+  </section>
+
+  <section class="flight" data-cam>
+    <div class="wrap">
+      <h2>From the whole attack surface <span>to the single packet that matters.</span></h2>
+    </div>
+  </section>
+
+  <section class="cap" id="detection" data-cam>
+    <div class="wrap">
+      <div class="copy">
+        <div class="num rv"><b>01</b> / 04 — AI-Powered Threat Detection</div>
+        <h3 class="rv">Sees the attack before it has a name.</h3>
+        <p class="rv">Behavioral models baseline every identity, host and workload, then flag the deviation, not the signature. Zero-days, living-off-the-land tradecraft and slow beacons surface in seconds.</p>
+        <ul class="rv">
+          <li>Unsupervised behavioral baselining <span>per entity</span></li>
+          <li>MITRE ATT&amp;CK mapped verdicts <span>14 tactics</span></li>
+          <li>EDR, cloud, identity and network telemetry <span>400+ sources</span></li>
+        </ul>
+      </div>
+      <div class="panel rv d1">
+        <div class="panel-head"><span>anomaly · fin-ws-22 · egress</span><span class="pill warn">● detected</span></div>
+        <svg class="chart" viewBox="0 0 400 190" preserveAspectRatio="none" role="img" aria-label="Network egress chart with flagged beaconing anomaly">
+          <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9fe7ff" stop-opacity=".25"/><stop offset="1" stop-color="#9fe7ff" stop-opacity="0"/></linearGradient></defs>
+          <g stroke="rgba(159,231,255,.08)"><line x1="0" x2="400" y1="47" y2="47"/><line x1="0" x2="400" y1="95" y2="95"/><line x1="0" x2="400" y1="142" y2="142"/></g>
+          <rect x="250" y="0" width="92" height="190" fill="rgba(255,159,67,.07)"/>
+          <path d="M0 140 L25 132 L50 138 L75 128 L100 134 L125 126 L150 133 L175 129 L200 136 L225 127 L250 131 L262 70 L274 128 L286 66 L298 127 L310 64 L322 126 L334 62 L346 130 L370 127 L400 133 L400 190 L0 190Z" fill="url(#g1)"/>
+          <path d="M0 140 L25 132 L50 138 L75 128 L100 134 L125 126 L150 133 L175 129 L200 136 L225 127 L250 131 L262 70 L274 128 L286 66 L298 127 L310 64 L322 126 L334 62 L346 130 L370 127 L400 133" fill="none" stroke="#9fe7ff" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+          <g fill="#ff9f43"><circle cx="262" cy="70" r="3"/><circle cx="286" cy="66" r="3"/><circle cx="310" cy="64" r="3"/><circle cx="334" cy="62" r="3"/></g>
+          <text x="252" y="22" fill="#ff9f43" font-family="Geist Mono, monospace" font-size="10">beacon · 24s jitter</text>
+        </svg>
+        <div class="chart-meta">
+          <div><small>technique</small><b>T1071.001</b></div>
+          <div><small>confidence</small><b>97.4%</b></div>
+          <div><small>detected in</small><b>11s</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cap flip" id="copilot" data-cam>
+    <div class="wrap">
+      <div class="copy">
+        <div class="num rv"><b>02</b> / 04 — Autonomous Security Operations</div>
+        <h3 class="rv">A SOC copilot that never sleeps.</h3>
+        <p class="rv">core0 triages every alert, stitches related signals into one incident, writes the timeline and runs your playbooks. It asks a human only when the blast radius demands it.</p>
+        <ul class="rv">
+          <li>Alert noise removed before it reaches a person <span>−94%</span></li>
+          <li>Natural-language investigation across all telemetry <span>ask anything</span></li>
+          <li>Guardrailed autonomous response <span>you set the limits</span></li>
+        </ul>
+      </div>
+      <div class="panel rv d1">
+        <div class="panel-head"><span>copilot · incident INC-4471</span><span class="pill ice">autonomous</span></div>
+        <div class="msg q"><span class="who">analyst · 03:12</span>Why did fin-ws-22 get isolated?</div>
+        <div class="msg a"><span class="who">core0 · 03:12</span>Confirmed C2 beaconing chained to a phishing payload. Contained in 38s:
+          <ol>
+            <li>Macro in <code>invoice_Q3.xlsm</code> spawned PowerShell</li>
+            <li>Encoded beacon to 185.■■.■■.41 every 24s</li>
+            <li>Host isolated, token revoked, 3 sibling mailboxes purged</li>
+          </ol>
+          <div class="actions"><span class="pill ok">✓ contained</span><span class="pill ice">timeline ready</span><span class="pill ice">0 humans paged</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cap" id="code" data-cam>
+    <div class="wrap">
+      <div class="copy">
+        <div class="num rv"><b>03</b> / 04 — Code Auditing &amp; Vulnerability Management</div>
+        <h3 class="rv">Fixes the flaw before it ships.</h3>
+        <p class="rv">core0 reads every pull request like a senior security engineer: it traces data flow across services, proves exploitability and opens the patch. Risk is ranked by reachability, not CVSS alone.</p>
+        <ul class="rv">
+          <li>SAST, SCA, secrets and IaC in one pass <span>every PR</span></li>
+          <li>Exploitability-ranked backlog <span>EPSS + reachability</span></li>
+          <li>Auto-generated, tested fix PRs <span>one click</span></li>
+        </ul>
+      </div>
+      <div class="panel rv d1">
+        <div class="panel-head"><span>api/orders.ts · PR #2291</span><span class="pill warn">critical · CWE-89</span></div>
+<pre class="diff"><span class="cm">  export async function getOrder(req, res) {</span><span class="del">-   const q = `SELECT * FROM orders WHERE id = ${req.query.id}`;</span><span class="del">-   const rows = await db.query(q);</span><span class="add">+   const rows = await db.query(</span><span class="add">+     "SELECT * FROM orders WHERE id = $1", [req.query.id]);</span><span class="cm">    res.json(rows);</span><span class="cm">  }</span></pre>
+        <div class="finding"><span class="pill warn">reachable</span><span>Untrusted <code>req.query.id</code> flows into a raw SQL string from a public route. Fix verified against 212 tests.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cap flip" id="zerotrust" data-cam>
+    <div class="wrap">
+      <div class="copy">
+        <div class="num rv"><b>04</b> / 04 — Infrastructure &amp; Zero Trust</div>
+        <h3 class="rv">Trust nothing. Verify continuously.</h3>
+        <p class="rv">Every request is judged on identity, device posture, behavior and context in real time. Lateral movement dies at the first hop, and least privilege enforces itself.</p>
+        <ul class="rv">
+          <li>Continuous identity &amp; device posture <span>per request</span></li>
+          <li>Microsegmentation across cloud and on-prem <span>auto-mapped</span></li>
+          <li>Just-in-time privileged access <span>zero standing</span></li>
+        </ul>
+      </div>
+      <div class="panel rv d1">
+        <div class="panel-head"><span>policy engine · live decisions</span><span class="pill ice">p50 4ms</span></div>
+        <table class="policy">
+          <tr><td>a.khan → prod-db<small>mfa · managed · eu-west</small></td><td><span class="checks"><i></i><i></i><i></i><i></i></span></td><td><span class="pill ok">allow · jit 30m</span></td></tr>
+          <tr><td>svc-billing → vault<small>mTLS · workload id</small></td><td><span class="checks"><i></i><i></i><i></i><i></i></span></td><td><span class="pill ok">allow</span></td></tr>
+          <tr><td>r.lee → k8s-admin<small>unmanaged device · new ASN</small></td><td><span class="checks"><i></i><i class="x"></i><i class="x"></i><i></i></span></td><td><span class="pill warn">deny · step-up</span></td></tr>
+          <tr><td>fin-ws-22 → file-srv<small>quarantined host</small></td><td><span class="checks"><i class="x"></i><i class="x"></i><i></i><i class="x"></i></span></td><td><span class="pill warn">deny</span></td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="metrics" id="platform" data-cam>
+    <div class="wrap">
+      <span class="eyebrow rv">One core, four engines</span>
+      <h2 class="rv">Shared context makes every engine smarter.</h2>
+      <div class="grid4">
+        <div class="rv"><b>38<sup>s</sup></b><p>Median time from first signal to containment.</p></div>
+        <div class="rv d1"><b>94<sup>%</sup></b><p>Fewer alerts reaching human analysts.</p></div>
+        <div class="rv d1"><b>2.1<sup>B</sup></b><p>Security events reasoned over every day.</p></div>
+        <div class="rv d2"><b>0</b><p>Implicit trust. Every request verified.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="console" data-cam>
+    <div class="wrap">
+      <span class="eyebrow rv">Live from the core</span>
+      <h2 class="rv">Every decision, explained.</h2>
+      <div class="panel term rv d1">
+        <div class="panel-head"><span class="dots"><i></i><i></i><i></i></span><span>core0 · decision stream</span><span class="pill ok">● streaming</span></div>
+        <div id="feed" role="log" aria-label="Simulated security decision stream"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="contact" data-cam>
+    <div class="wrap">
+      <span class="eyebrow rv">Early access · Q4 2026</span>
+      <h2 class="rv">Let's talk about your attack surface.</h2>
+      <form class="rv d1" id="form">
+        <label for="email" class="sr">Work email</label>
+        <input id="email" type="email" required placeholder="you@company.com" autocomplete="email">
+        <button class="btn solid" type="submit">Request access</button>
+      </form>
+      <p id="formNote" role="status"></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="#top"><i></i>core0</a>
+    <div class="foot-links"><a href="#detection">Detection</a><a href="#copilot">Copilot</a><a href="#code">Code</a><a href="#zerotrust">Zero Trust</a></div>
+    <span>© 2026 core0. Defense at machine speed.</span>
+  </div>
+</footer>
+
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const small = innerWidth < 768;
+const canvas = document.getElementById("scene");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x04060a);
+scene.fog = new THREE.FogExp2(0x04060a, 0.0052);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 600);
+
+// soft round sprite for all points
+const dot = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(.35, "rgba(255,255,255,.6)"); r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+})();
+const pts = (size, opacity = 1) => new THREE.PointsMaterial({ size, map: dot, vertexColors: true, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
+const cloud = (pos, col) => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  return g;
+};
+
+// value noise + ridged fbm for terrain
+const hash = (x, z) => { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); };
+const noise = (x, z) => {
+  const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+  const a = hash(ix, iz), b = hash(ix + 1, iz), c = hash(ix, iz + 1), d = hash(ix + 1, iz + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+};
+const ridge = (x, z) => { let h = 0, amp = 1, f = 1; for (let i = 0; i < 5; i++) { const n = 1 - Math.abs(noise(x * f, z * f) * 2 - 1); h += n * n * amp; amp *= .5; f *= 2.05; } return h; };
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+const CORE = new THREE.Vector3(0, 12, -170);
+
+// terrain point cloud: mountains with a canyon leading to the core
+{
+  const N = small ? 150 : 240, W = 340, D = 420, pos = [], col = [];
+  const low = new THREE.Color(0x0b2a44), high = new THREE.Color(0xdff6ff), c = new THREE.Color();
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const x = (i / (N - 1) - .5) * W, z = 120 - (j / (N - 1)) * D;
+    const canyon = smooth(6, 60, Math.abs(x));
+    const basin = smooth(25, 70, Math.hypot(x - CORE.x, z - CORE.z));
+    const h = ridge(x * .018, z * .018) * 26 * (.08 + .92 * canyon) * (.1 + .9 * basin) - 4;
+    pos.push(x, h, z);
+    c.copy(low).lerp(high, Math.min(1, Math.max(0, h / 30)));
+    col.push(c.r, c.g, c.b);
+  }
+  scene.add(new THREE.Points(cloud(pos, col), pts(small ? 1.1 : .8, .9)));
+}
+
+// cloud layer
+const clouds = (() => {
+  const n = small ? 2500 : 6000, pos = [], col = [];
+  for (let i = 0; i < n; i++) {
+    const x = (Math.random() - .5) * 340, z = 120 - Math.random() * 420;
+    if (noise(x * .03, z * .03) < .55) continue;
+    pos.push(x, 26 + Math.random() * 6, z); col.push(.55, .7, .8);
+  }
+  const p = new THREE.Points(cloud(pos, col), pts(1.8, .18)); scene.add(p); return p;
+})();
+
+// the core: wireframe shell, particle heart, orbit rings, glow
+const core = new THREE.Group(); core.position.copy(CORE); scene.add(core);
+const shell = new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(16, 2)),
+  new THREE.LineBasicMaterial({ color: 0x9fe7ff, transparent: true, opacity: .22, blending: THREE.AdditiveBlending }));
+core.add(shell);
+const heart = (() => {
+  const pos = [], col = [], n = small ? 2500 : 5000;
+  for (let i = 0; i < n; i++) {
+    const v = new THREE.Vector3().randomDirection().multiplyScalar(6 + Math.pow(Math.random(), .6) * 8);
+    pos.push(v.x, v.y, v.z);
+    col.push(...(Math.random() < .04 ? [1, .62, .26] : Math.random() < .5 ? [.62, .9, 1] : [.85, 1, .4]));
+  }
+  return new THREE.Points(cloud(pos, col), pts(.32, .9));
+})();
+core.add(heart);
+const rings = [0, 1, 2].map(i => {
+  const r = new THREE.Mesh(new THREE.TorusGeometry(20 + i * 5, .05, 6, 160),
+    new THREE.MeshBasicMaterial({ color: i === 1 ? 0xc8ff4d : 0x9fe7ff, transparent: true, opacity: .35, blending: THREE.AdditiveBlending }));
+  r.rotation.set(Math.PI / 2 + i * .5, i * .8, 0); core.add(r); return r;
+});
+const glow = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d"), r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, "rgba(159,231,255,.55)"); r.addColorStop(.4, "rgba(80,160,220,.15)"); r.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  s.scale.setScalar(90); core.add(s); return s;
+})();
+
+// packets streaming down the canyon into the core; amber ones are threats
+const P = small ? 220 : 500;
+const packets = (() => {
+  const pos = [], col = [];
+  for (let i = 0; i < P; i++) {
+    pos.push((Math.random() - .5) * 20, 4 + Math.random() * 14, 120 - Math.random() * 290);
+    col.push(...(Math.random() < .12 ? [1, .62, .26] : [.62, .9, 1]));
+  }
+  const p = new THREE.Points(cloud(pos, col), pts(.9)); scene.add(p); return p;
+})();
+
+// one camera keyframe per [data-cam] section: [position, look-at]
+const K = [
+  [[0, 20, 100], [0, 10, -170]],     // hero: high above the range
+  [[0, 9, -10], [0, 11, -170]],      // flight: down into the canyon
+  [[0, 12, -150], [0, 12, -230]],    // detection: punching through the shell
+  [[3, 12, -168], [-60, 16, -175]],  // copilot: inside, turning
+  [[-3, 13, -172], [40, 2, -150]],   // code
+  [[0, 12, -176], [0, 12, -100]],    // zero trust: looking back at the world
+  [[0, 34, -120], [0, 10, -170]],    // metrics: pulling out
+  [[50, 70, -80], [0, 6, -170]],     // console
+  [[0, 130, -110], [0, 0, -170]],    // cta: high orbit
+].map(([p, l]) => [new THREE.Vector3(...p), new THREE.Vector3(...l)]);
+const sections = [...document.querySelectorAll("[data-cam]")];
+const camPos = K[0][0].clone(), camLook = K[0][1].clone(), tPos = new THREE.Vector3(), tLook = new THREE.Vector3();
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+// continuous camera: interpolate from this section's keyframe to the next as it scrolls past
+function target() {
+  const y = scrollY;
+  let i = sections.length - 1;
+  while (i > 0 && sections[i].offsetTop > y) i--;
+  const last = i === K.length - 1, s = sections[i];
+  const f = last ? 0 : ease(Math.min(1, Math.max(0, (y - s.offsetTop) / s.offsetHeight)));
+  tPos.lerpVectors(K[i][0], K[last ? i : i + 1][0], f);
+  tLook.lerpVectors(K[i][1], K[last ? i : i + 1][1], f);
+}
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight;
+  camera.fov = innerWidth < innerHeight ? 75 : 60;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+
+const clock = new THREE.Clock();
+function frame() {
+  const t = clock.getElapsedTime();
+  target();
+  const k = reduce ? 1 : .06;
+  camPos.lerp(tPos, k); camLook.lerp(tLook, k);
+  camera.position.copy(camPos);
+  if (!reduce) camera.position.y += Math.sin(t * .6) * .25;
+  camera.lookAt(camLook);
+
+  // dim the core while the camera is inside it so overlaid copy stays readable
+  const inside = 1 - smooth(14, 40, camPos.distanceTo(CORE));
+  heart.material.opacity = .9 - inside * .65;
+  glow.material.opacity = 1 - inside * .9;
+  shell.material.opacity = .22 - inside * .12;
+
+  if (!reduce) {
+    shell.rotation.y = t * .05; shell.rotation.x = t * .02;
+    heart.rotation.y = -t * .08;
+    rings.forEach((r, i) => r.rotation.z = t * (.1 + i * .05) * (i % 2 ? -1 : 1));
+    clouds.position.x = Math.sin(t * .05) * 6;
+    const a = packets.geometry.attributes.position.array;
+    for (let i = 0; i < P; i++) {
+      a[i * 3 + 2] -= .5 + (i % 7) * .08;
+      if (a[i * 3 + 2] < CORE.z + 8) a[i * 3 + 2] = 120; // absorbed by the core, respawn
+    }
+    packets.geometry.attributes.position.needsUpdate = true;
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+
+// reveal on scroll
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .2 });
+document.querySelectorAll(".rv").forEach(el => io.observe(el));
+
+// live counter
+const counter = document.getElementById("counter");
+let n = 1284903;
+setInterval(() => { n += 1 + Math.floor(Math.random() * 9); counter.textContent = n.toLocaleString("en-US"); }, 700);
+
+// simulated decision stream
+const feed = document.getElementById("feed");
+const events = [
+  ["DETECT", "#ff9f43", "beacon pattern fin-ws-22 → 185.■■.■■.41", "contained"],
+  ["ALLOW", "#c8ff4d", "a.khan → prod-db · posture ok · jit 30m", "4ms"],
+  ["DENY", "#ff9f43", "r.lee → k8s-admin · unmanaged device", "step-up"],
+  ["AUDIT", "#9fe7ff", "PR #2291 · CWE-89 in api/orders.ts", "fix opened"],
+  ["TRIAGE", "#9fe7ff", "412 alerts merged → INC-4471", "1 incident"],
+  ["DETECT", "#ff9f43", "kerberoast attempt svc-sql · T1558.003", "blocked"],
+  ["ALLOW", "#c8ff4d", "svc-billing → vault · mTLS verified", "2ms"],
+  ["PATCH", "#9fe7ff", "CVE-2026-1182 openssl · 14 hosts", "rolled out"],
+  ["DETECT", "#ff9f43", "impossible travel · j.ortiz · SG → BR", "session killed"],
+  ["AUDIT", "#9fe7ff", "secret in commit 9f3a1c · AWS key", "rotated"],
+];
+const pad = v => String(v).padStart(2, "0");
+function push() {
+  const [tag, color, msg, out] = events[Math.floor(Math.random() * events.length)];
+  const d = new Date(), row = document.createElement("div");
+  row.innerHTML = `<span class="t">${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}</span><span style="color:${color}">${tag}</span><span></span><span class="t">${out}</span>`;
+  row.children[2].textContent = msg;
+  feed.append(row);
+  while (feed.children.length > 14) feed.firstChild.remove();
+}
+for (let i = 0; i < 10; i++) push();
+setInterval(push, reduce ? 3000 : 1100);
+
+// demo form: no backend yet
+document.getElementById("form").addEventListener("submit", e => {
+  e.preventDefault();
+  document.getElementById("formNote").textContent = "✓ Request received. The core will be in touch.";
+  e.target.reset();
+});
+</script>
+</body>
+</html>
